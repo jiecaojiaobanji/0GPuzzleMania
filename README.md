@@ -42,17 +42,37 @@ nvm current # 预期输出: v22.13.1
 npm -v    # 预期输出: 10.9.2
 ```
 
-## 3. 部署脚本
+## 3. 部署脚本输入私钥ip
 1. 克隆项目
 ```bash
 git clone https://github.com//jiecaojiaobanji/0GPuzzleMania.git
 cd 0GPuzzleMania
 ```
 
+
 2. 安装依赖
 ```bash
 npm install
 ```
+
+3 输入私钥保存，一行一个uo
+```bash
+nano  wallet.txt
+ctrl +x
+y
+enter
+
+```
+
+4 ip
+```bash
+nano  proxy.txt
+ctrl +x
+y
+enter
+
+```
+
 
 ## 4. 使用Screen会话
 ```bash
