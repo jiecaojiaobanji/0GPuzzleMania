@@ -1,9 +1,11 @@
+原作者https://github.com/mumumusf/0GPuzzleMania 
+ip一行一行输麻烦稍微改下
 # 0G Puzzle Mania 自动化工具使用教程
 
 [English](README_EN.md) | 简体中文
 
 ## 1. 注册账号
-1. 访问 [0G Puzzle Mania](https://puzzlemania.0g.ai/?referral=hcz1AniQ6AmF)
+1. 访问 [https://puzzlemania.0g.ai/?referral=7LBSgMJlaNPv)
 2. 连接你的钱包（支持MetaMask等）
 3. 连接你的Twitter账号
 
@@ -43,7 +45,7 @@ npm -v    # 预期输出: 10.9.2
 ## 3. 部署脚本
 1. 克隆项目
 ```bash
-git clone https://github.com/mumumusf/0GPuzzleMania.git
+git clone https://github.com//jiecaojiaobanji/0GPuzzleMania.git
 cd 0GPuzzleMania
 ```
 
