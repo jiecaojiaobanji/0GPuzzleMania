@@ -25,4 +25,4 @@ const banner = `
 ** ====================================== **
 `;
 
-export.default = banner; 
+export default banner; 
