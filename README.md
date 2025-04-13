@@ -55,16 +55,17 @@ cd 0GPuzzleMania
 npm install
 ```
 
-3 输入私钥保存，一行一个uo
+3 输入私钥保存，一行一个私钥
 ```bash
 nano  wallet.txt
+粘贴私钥
 ctrl +x
 y
 enter
 
 ```
 
-4 ip
+4 ip 同私钥
 ```bash
 nano  proxy.txt
 ctrl +x
