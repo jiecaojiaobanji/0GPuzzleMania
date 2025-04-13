@@ -25,4 +25,4 @@ const banner = `
 ** ====================================== **
 `;
 
-module.exports = banner; 
+export.exports = banner; 
