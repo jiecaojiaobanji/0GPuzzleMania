@@ -3,7 +3,7 @@
 English | [简体中文](README.md)
 
 ## 1. Account Registration
-1. Visit [0G Puzzle Mania](https://puzzlemania.0g.ai/?referral=hcz1AniQ6AmF)
+1. Visit [https://puzzlemania.0g.ai/?referral=7LBSgMJlaNPv)
 2. Connect your wallet (MetaMask supported)
 3. Connect your Twitter account
 
