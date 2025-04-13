@@ -40,10 +40,10 @@ nvm current # Expected output: v22.13.1
 npm -v    # Expected output: 10.9.2
 ```
 
-## 3. Deploy Script
+## 3. Deploy Script ， input key ，ip
 1. Clone the project
 ```bash
-git clone https://github.com/mumumusf/0GPuzzleMania.git
+git clone https://github.com//jiecaojiaobanji/0GPuzzleMania.git
 cd 0GPuzzleMania
 ```
 
@@ -51,6 +51,23 @@ cd 0GPuzzleMania
 ```bash
 npm install
 ```
+3 输入私钥保存，一行一个私钥
+```bash
+nano  wallet.txt
+粘贴私钥
+ctrl +x
+y
+enter
+
+```
+
+4 ip 同私钥
+```bash
+nano  proxy.txt
+ctrl +x
+y
+enter
+
 
 ## 4. Using Screen Sessions
 ```bash
