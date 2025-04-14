@@ -129,14 +129,11 @@ async function requestWithRetry(fn, maxRetries = 30, delayMs = 2000, debug = fal
   let attempt = 0;
   while (attempt < maxRetries) {
     try {
-      return await fn(debug);
+      return await fn();
     } catch (err) {
       if (err.response && err.response.status === 429) {
         attempt++;
         if (debug) console.warn(chalk.yellow(`尝试 ${attempt}: 收到429错误, ${delayMs}ms后重试...`));
-        if (attempt >= maxRetries) {
-          throw new Error("达到最大重试次数，切换代理");
-        }
         await new Promise(resolve => setTimeout(resolve, delayMs));
       } else {
         throw err;
@@ -246,7 +243,7 @@ async function performCheckIn(activityId, headers) {
 }
 
 // 账户登录
-async function doLogin(walletKey, debug = true, axiosInstance) {
+async function doLogin(walletKey, debug = true) {
   try {
     return await requestWithRetry(async () => {
       const wallet = new Wallet(walletKey);
@@ -263,10 +260,6 @@ async function doLogin(walletKey, debug = true, axiosInstance) {
         "Origin": "https://puzzlemania.0g.ai",
         "Referer": "https://puzzlemania.0g.ai/"
       };
-
-      // 显示当前使用的代理
-      const currentProxy = axiosInstance.defaults.httpAgent ? axiosInstance.defaults.httpAgent.proxy.href : "未使用代理";
-      console.log(chalk.yellow(`当前使用代理: ${currentProxy}`));
 
       // 初始化登录
       console.log(chalk.blue("调试信息 - 开始初始化登录..."));
@@ -379,7 +372,7 @@ function getTaskChineseName(title) {
 // 单次任务循环
 async function runCycleOnce(walletKey, axiosInstance) {
   const loginSpinner = ora(chalk.cyan(" 处理登录中...")).start();
-  const loginData = await doLogin(walletKey, false, axiosInstance);
+  const loginData = await doLogin(walletKey, false);
   if (!loginData) {
     loginSpinner.fail(chalk.red("登录失败，跳过账户."));
     return;
@@ -462,11 +455,11 @@ async function runCycleOnce(walletKey, axiosInstance) {
   if (!campaignData) throw new Error("未找到活动数据");
 
   // 处理任务
-  const dailyCheckin = campaignData.activities.find(act =>
+  let dailyCheckin = campaignData.activities.find(act =>
     act.title && act.title.toLowerCase().includes("daily check-in")
   );
-  const claimedTasks = [];
-  const unclaimedTasks = [];
+  let claimedTasks = [];
+  let unclaimedTasks = [];
   campaignData.activities.forEach(act => {
     if (dailyCheckin && act.id === dailyCheckin.id) return;
     if (act.records && act.records.length > 0) {
@@ -510,7 +503,7 @@ async function runCycleOnce(walletKey, axiosInstance) {
   console.log(chalk.cyanBright(`钱包地址      : ${shortAddress(address)}`));
   console.log(chalk.cyanBright(`积分          : ${userMePoints}`));
   console.log(chalk.cyanBright(`每日签到      : ${dailyCheckin ? checkinStatus : "未完成"}`));
-  console.log(chalk.cyanBright(`代理服务器    : ${axiosInstance.defaults.httpAgent ? axiosInstance.defaults.httpAgent.proxy.href : "未使用"}`));
+  console.log(chalk.cyanBright(`代理服务器    : ${proxyUrl || "未使用"}`));
   console.log(chalk.magenta('============================================================================'));
 
   // 显示已完成任务
@@ -548,17 +541,23 @@ async function runCycleOnce(walletKey, axiosInstance) {
 async function mainLoopRoundRobin() {
   // 从文件读取钱包私钥和代理IP列表
   const wallets = [];
+  
   try {
     const privateKeys = fs.readFileSync('wallet.txt', 'utf8').split('\n').filter(key => key.trim());
     const proxyIPs = fs.readFileSync('proxy.txt', 'utf8').split('\n').filter(ip => ip.trim());
 
-    if (privateKeys.length === 0 || proxyIPs.length === 0) {
-      console.error(chalk.red("wallet.txt 或 proxy.txt 文件为空"));
+    if (privateKeys.length === 0) {
+      console.error(chalk.red("wallet.txt 文件为空"));
+      process.exit(1);
+    }
+
+    if (proxyIPs.length === 0) {
+      console.error(chalk.red("proxy.txt 文件为空"));
       process.exit(1);
     }
 
     if (privateKeys.length !== proxyIPs.length) {
-      console.error(chalk.red("wallet.txt 和 proxy.txt 中的行数不匹配"));
+      console.error(chalk.red("wallet.txt 和 proxy.txt 的行数不匹配"));
       process.exit(1);
     }
 
@@ -584,13 +583,13 @@ async function mainLoopRoundRobin() {
             console.log(chalk.green(`钱包 ${shortAddress(address)} 使用代理: ${proxyUrl}`));
           }
         }
-
+        
         wallets.push({
           privateKey: processedKey,
           address: address,
           proxyUrl: proxyUrl
         });
-
+        
         console.log(chalk.green(`钱包 ${shortAddress(address)} 已添加`));
       } catch (err) {
         console.error(chalk.red(`第 ${i + 1} 行私钥格式错误: ${err.message}`));
@@ -612,62 +611,24 @@ async function mainLoopRoundRobin() {
     const cycleStart = Date.now();
     
     // 遍历所有钱包
-    for (let walletIndex = 0; walletIndex < wallets.length; walletIndex++) {
-      const wallet = wallets[walletIndex];
+    for (const wallet of wallets) {
       console.log(chalk.cyan(`\n处理账户: ${shortAddress(wallet.address)}\n`));
       try {
-        // 获取所有可用的代理IP
-        const allProxyIPs = fs.readFileSync('proxy.txt', 'utf8').split('\n')
-          .filter(ip => ip.trim())
-          .map(ip => parseProxyString(ip.trim()))
-          .filter(url => url !== null);
-        
-        // 尝试登录，最多尝试5次
-        let loginSuccess = false;
-        
-        // 根据钱包索引计算起始代理索引，实现轮询
-        const startProxyIndex = walletIndex % allProxyIPs.length;
-        
-        for (let attempt = 0; attempt < 5; attempt++) {
-          try {
-            // 计算当前要使用的代理索引
-            const currentProxyIndex = (startProxyIndex + attempt) % allProxyIPs.length;
-            const proxyUrl = allProxyIPs[currentProxyIndex];
-            
-            console.log(chalk.yellow(`尝试使用代理: ${proxyUrl}`));
-            
-            // 创建带有代理的axios实例
-            let axiosInstance = axios.create();
-            let agent;
-            if (proxyUrl.startsWith('http://') || proxyUrl.startsWith('https://')) {
-              agent = new HttpsProxyAgent(proxyUrl);
-            } else if (proxyUrl.startsWith('socks5://')) {
-              agent = new SocksProxyAgent(proxyUrl);
-            }
-            if (agent) {
-              axiosInstance = axios.create({ httpAgent: agent, httpsAgent: agent });
-            }
-
-            const loginSpinner = ora(chalk.cyan(" 处理登录中...")).start();
-            const loginData = await doLogin(wallet.privateKey, true, axiosInstance);
-            loginSpinner.stop();
-            
-            if (loginData) {
-              loginSuccess = true;
-              await runCycleOnce(wallet.privateKey, axiosInstance);
-              break;
-            }
-          } catch (err) {
-            if (err.message === "达到最大重试次数，切换代理") {
-              console.log(chalk.yellow("429错误重试次数过多，切换代理..."));
-              continue;
-            }
-            console.error(chalk.red(`登录尝试 ${attempt + 1}/5 失败: ${err.message}`));
-            if (attempt === 4) {
-              console.log(chalk.yellow(`账户 ${shortAddress(wallet.address)} 登录失败，跳过该账户`));
-            }
+        // 为每个钱包创建独立的axios实例
+        let axiosInstance = axios.create();
+        if (wallet.proxyUrl) {
+          let agent;
+          if (wallet.proxyUrl.startsWith('http://') || wallet.proxyUrl.startsWith('https://')) {
+            agent = new HttpsProxyAgent(wallet.proxyUrl);
+          } else if (wallet.proxyUrl.startsWith('socks5://')) {
+            agent = new SocksProxyAgent(wallet.proxyUrl);
+          }
+          if (agent) {
+            axiosInstance = axios.create({ httpAgent: agent, httpsAgent: agent });
           }
         }
+        
+        await runCycleOnce(wallet.privateKey, axiosInstance);
       } catch (err) {
         console.error(chalk.red(`账户 ${shortAddress(wallet.address)} 处理错误: ${err.message}`));
       }
